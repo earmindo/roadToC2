@@ -1,36 +1,56 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { getGlobalStats, getWeakestWords } from "../data/storage";
 import { formatDuration } from "../utils";
-import { colors } from "../theme";
+import { colors, gradients, shadow } from "../theme";
+import SpeakButton from "./SpeakButton";
 
-export default function Dashboard({ state, onNavigate }) {
+export default function Dashboard({ state, onNavigate, onStartDue }) {
   const stats = getGlobalStats(state);
-  const weakest = getWeakestWords(state, 8);
+  const weakest = getWeakestWords(state, 6);
 
   return (
     <ScrollView style={s.view} contentContainerStyle={{ paddingBottom: 24 }}>
-      <Text style={s.h2}>Tableau de bord</Text>
+      <LinearGradient colors={gradients.header} style={s.hero}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.heroLabel}>À réviser aujourd'hui</Text>
+          <Text style={s.heroValue}>{stats.dueCount} mot{stats.dueCount !== 1 ? "s" : ""}</Text>
+        </View>
+        <TouchableOpacity style={s.heroBtn} onPress={onStartDue}>
+          <Ionicons name="play" size={18} color={colors.primary} />
+          <Text style={s.heroBtnText}>Réviser</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+
+      {stats.dayStreak > 0 && (
+        <View style={s.streakRow}>
+          <Text style={{ fontSize: 20 }}>🔥</Text>
+          <Text style={s.streakText}>{stats.dayStreak} jour{stats.dayStreak > 1 ? "s" : ""} de suite</Text>
+        </View>
+      )}
 
       <View style={s.grid}>
-        <StatCard label="Mots au total" value={stats.totalWords} />
-        <StatCard label="Précision globale" value={`${stats.accuracy}%`} color={colors.primary} />
-        <StatCard label="Maîtrisés" value={stats.masteredCount} color={colors.good} />
-        <StatCard label="À travailler" value={stats.strugglingCount} color={colors.bad} />
-        <StatCard label="Nouveaux" value={stats.newCount} />
-        <StatCard label="Verbes irréguliers" value={stats.irregularCount} />
-        <StatCard label="Temps de pratique" value={formatDuration(stats.totalPracticeMs)} />
-        <StatCard label="Sessions" value={stats.sessionsCount} />
+        <StatCard icon="library" label="Mots au total" value={stats.totalWords} />
+        <StatCard icon="checkmark-circle" label="Précision" value={`${stats.accuracy}%`} color={colors.primary} />
+        <StatCard icon="ribbon" label="Maîtrisés" value={stats.masteredCount} color={colors.good} />
+        <StatCard icon="alert-circle" label="À travailler" value={stats.strugglingCount} color={colors.bad} />
+        <StatCard icon="sparkles" label="Nouveaux" value={stats.newCount} />
+        <StatCard icon="repeat" label="Verbes irrég." value={stats.irregularCount} />
+        <StatCard icon="time" label="Temps pratiqué" value={formatDuration(stats.totalPracticeMs)} />
+        <StatCard icon="flash" label="Sessions" value={stats.sessionsCount} />
       </View>
 
-      <View style={s.panel}>
+      <View style={[s.panel, shadow]}>
         <Text style={s.h3}>Points faibles</Text>
         {weakest.length === 0 && (
           <Text style={s.muted}>Pas encore assez de données. Commence à pratiquer !</Text>
         )}
         {weakest.map((w) => (
           <View style={s.weakRow} key={w.id}>
-            <Text style={{ flex: 1, fontWeight: "600" }}>{w.en}</Text>
+            <SpeakButton text={w.en} size={15} style={{ width: 28, height: 28, borderRadius: 14 }} />
+            <Text style={{ flex: 1, fontWeight: "600", marginLeft: 8 }}>{w.en}</Text>
             <Text style={{ flex: 1, color: colors.muted }}>{w.fr}</Text>
             <View style={[s.badge, w.rate < 0.4 ? s.badgeBad : s.badgeWarn]}>
               <Text style={w.rate < 0.4 ? s.badgeBadText : s.badgeWarnText}>
@@ -42,15 +62,17 @@ export default function Dashboard({ state, onNavigate }) {
       </View>
 
       <TouchableOpacity style={s.cta} onPress={() => onNavigate("practice-setup")}>
-        <Text style={s.ctaText}>Commencer une session de pratique</Text>
+        <Ionicons name="add-circle" size={18} color="white" />
+        <Text style={s.ctaText}>Nouvelle session personnalisée</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
-function StatCard({ label, value, color }) {
+function StatCard({ icon, label, value, color }) {
   return (
-    <View style={s.card}>
+    <View style={[s.card, shadow]}>
+      <Ionicons name={icon} size={18} color={color || colors.muted} />
       <Text style={[s.cardValue, color ? { color } : null]}>{value}</Text>
       <Text style={s.cardLabel}>{label}</Text>
     </View>
@@ -59,31 +81,33 @@ function StatCard({ label, value, color }) {
 
 const s = StyleSheet.create({
   view: { flex: 1, backgroundColor: colors.bg, padding: 16 },
-  h2: { fontSize: 22, fontWeight: "700", marginBottom: 12, color: colors.text },
+  hero: {
+    borderRadius: 18,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  heroLabel: { color: "rgba(255,255,255,0.85)", fontSize: 13 },
+  heroValue: { color: "white", fontSize: 24, fontWeight: "700", marginTop: 2 },
+  heroBtn: {
+    backgroundColor: "white",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  heroBtnText: { color: colors.primary, fontWeight: "700" },
+  streakRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12, paddingHorizontal: 4 },
+  streakText: { fontWeight: "600", color: colors.text },
   h3: { fontSize: 16, fontWeight: "700", marginBottom: 10, color: colors.text },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    padding: 14,
-    width: "47%",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  cardValue: { fontSize: 22, fontWeight: "700", color: colors.text },
+  card: { backgroundColor: colors.card, borderRadius: 14, padding: 14, width: "47%" },
+  cardValue: { fontSize: 20, fontWeight: "700", color: colors.text, marginTop: 6 },
   cardLabel: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  panel: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 1,
-  },
+  panel: { backgroundColor: colors.card, borderRadius: 14, padding: 16, marginBottom: 16 },
   muted: { color: colors.muted, fontSize: 13 },
   weakRow: {
     flexDirection: "row",
@@ -102,7 +126,10 @@ const s = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
     marginTop: 4,
   },
-  ctaText: { color: "white", fontWeight: "700", fontSize: 16 },
+  ctaText: { color: "white", fontWeight: "700", fontSize: 15 },
 });

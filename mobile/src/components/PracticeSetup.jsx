@@ -1,17 +1,20 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { getCollections } from "../data/storage";
-import { colors } from "../theme";
+import { Ionicons } from "@expo/vector-icons";
+import { getCollections, getDueWords } from "../data/storage";
+import { colors, shadow } from "../theme";
 
 const MODES = [
-  { key: "mcq", label: "QCM", desc: "Choisis la bonne traduction parmi 4." },
-  { key: "typing", label: "Écriture", desc: "Écris la traduction toi-même." },
-  { key: "match", label: "Association", desc: "Relie les mots à leur traduction." },
-  { key: "flashcards", label: "Flashcards", desc: "Retourne la carte, comme Anki." },
+  { key: "mcq", label: "QCM", desc: "Choisis la bonne traduction parmi 4.", icon: "list" },
+  { key: "typing", label: "Écriture", desc: "Écris la traduction toi-même.", icon: "create" },
+  { key: "match", label: "Association", desc: "Relie les mots à leur traduction.", icon: "git-network" },
+  { key: "flashcards", label: "Flashcards", desc: "Retourne la carte, comme Anki.", icon: "albums" },
+  { key: "listening", label: "Écoute", desc: "Écoute le mot et retrouve-le.", icon: "headset" },
 ];
 
 const SCOPES = {
+  due: "Dû aujourd'hui (recommandé)",
   all: "Tous les mots",
   irregularVerbs: "Verbes irréguliers",
   struggling: "Mots à travailler",
@@ -21,18 +24,23 @@ const SCOPES = {
 
 export default function PracticeSetup({ state, onStart }) {
   const [mode, setMode] = useState("mcq");
-  const [scope, setScope] = useState("all");
+  const [scope, setScope] = useState("due");
   const collections = getCollections(state);
 
-  const availableCount =
-    scope === "all" ? Object.values(state.words).length : collections[scope].length;
+  function countFor(sc) {
+    if (sc === "all") return Object.values(state.words).length;
+    if (sc === "due") return getDueWords(state).length;
+    return collections[sc].length;
+  }
+
+  const availableCount = countFor(scope);
   const disabled = availableCount < (mode === "mcq" ? 4 : 1);
 
   return (
     <ScrollView style={s.view} contentContainerStyle={{ paddingBottom: 24 }}>
       <Text style={s.h2}>Nouvelle session</Text>
 
-      <View style={s.panel}>
+      <View style={[s.panel, shadow]}>
         <Text style={s.h3}>Mode</Text>
         <View style={s.modeGrid}>
           {MODES.map((m) => (
@@ -41,19 +49,20 @@ export default function PracticeSetup({ state, onStart }) {
               style={[s.modeCard, mode === m.key && s.modeCardActive]}
               onPress={() => setMode(m.key)}
             >
-              <Text style={{ fontWeight: "700" }}>{m.label}</Text>
+              <Ionicons name={m.icon} size={18} color={mode === m.key ? colors.primary : colors.muted} />
+              <Text style={{ fontWeight: "700", marginTop: 4 }}>{m.label}</Text>
               <Text style={s.muted}>{m.desc}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
-      <View style={s.panel}>
+      <View style={[s.panel, shadow]}>
         <Text style={s.h3}>Collection</Text>
         <View style={s.pickerWrap}>
           <Picker selectedValue={scope} onValueChange={setScope}>
             {Object.entries(SCOPES).map(([key, label]) => (
-              <Picker.Item key={key} label={label} value={key} />
+              <Picker.Item key={key} label={`${label} · ${countFor(key)}`} value={key} />
             ))}
           </Picker>
         </View>
@@ -65,10 +74,13 @@ export default function PracticeSetup({ state, onStart }) {
         disabled={disabled}
         onPress={() => onStart(mode, scope)}
       >
+        <Ionicons name="play" size={18} color="white" />
         <Text style={s.ctaText}>Démarrer</Text>
       </TouchableOpacity>
-      {disabled && mode === "mcq" && (
-        <Text style={s.muted}>Le QCM nécessite au moins 4 mots dans cette collection.</Text>
+      {disabled && (
+        <Text style={s.muted}>
+          {mode === "mcq" ? "Le QCM nécessite au moins 4 mots dans cette collection." : "Aucun mot disponible dans cette collection."}
+        </Text>
       )}
     </ScrollView>
   );
@@ -91,7 +103,15 @@ const s = StyleSheet.create({
   modeCardActive: { borderColor: colors.primary, backgroundColor: "#eef2ff" },
   muted: { color: colors.muted, fontSize: 12, marginTop: 4 },
   pickerWrap: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, marginBottom: 6 },
-  cta: { backgroundColor: colors.primary, padding: 16, borderRadius: 12, alignItems: "center" },
+  cta: {
+    backgroundColor: colors.primary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
   ctaDisabled: { backgroundColor: "#b8b8d9" },
   ctaText: { color: "white", fontWeight: "700", fontSize: 16 },
 });

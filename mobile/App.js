@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { SafeAreaView, View, Text, TouchableOpacity, StyleSheet, StatusBar } from "react-native";
+import { SafeAreaView, View, Text, TouchableOpacity, StyleSheet, StatusBar, Platform } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { loadState, saveState } from "./src/data/storage";
 import { colors } from "./src/theme";
 import Dashboard from "./src/components/Dashboard";
 import Collections from "./src/components/Collections";
 import AddWord from "./src/components/AddWord";
+import Settings from "./src/components/Settings";
 import PracticeSetup from "./src/components/PracticeSetup";
 import PracticeSession from "./src/components/PracticeSession";
 
 const TABS = [
-  { key: "dashboard", label: "Tableau de bord" },
-  { key: "collections", label: "Collections" },
-  { key: "practice-setup", label: "Pratiquer" },
-  { key: "add-word", label: "Ajouter" },
+  { key: "dashboard", label: "Accueil", icon: "home" },
+  { key: "collections", label: "Collections", icon: "layers" },
+  { key: "practice-setup", label: "Pratiquer", icon: "flash" },
+  { key: "add-word", label: "Ajouter", icon: "add-circle" },
+  { key: "settings", label: "Réglages", icon: "settings" },
 ];
 
 export default function App() {
@@ -49,25 +52,15 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.app}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <View style={styles.header}>
-        <Text style={styles.title}>🧠 VocabMaster</Text>
-      </View>
-      <View style={styles.nav}>
-        {TABS.map((t) => {
-          const active = view === t.key || (t.key === "practice-setup" && view === "practice-session");
-          return (
-            <TouchableOpacity key={t.key} style={[styles.navBtn, active && styles.navBtnActive]} onPress={() => goTo(t.key)}>
-              <Text style={[styles.navText, active && styles.navTextActive]}>{t.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
       <View style={{ flex: 1 }}>
-        {view === "dashboard" && <Dashboard state={state} onNavigate={goTo} />}
+        {view === "dashboard" && (
+          <Dashboard state={state} onNavigate={goTo} onStartDue={() => startPractice("mcq", "due")} />
+        )}
         {view === "collections" && <Collections state={state} setState={setState} />}
         {view === "add-word" && <AddWord state={state} setState={setState} />}
+        {view === "settings" && <Settings state={state} setState={setState} />}
         {view === "practice-setup" && <PracticeSetup state={state} onStart={startPractice} />}
         {view === "practice-session" && practiceConfig && (
           <PracticeSession
@@ -80,6 +73,18 @@ export default function App() {
           />
         )}
       </View>
+
+      <View style={styles.tabBar}>
+        {TABS.map((t) => {
+          const active = view === t.key || (t.key === "practice-setup" && view === "practice-session");
+          return (
+            <TouchableOpacity key={t.key} style={styles.tabBtn} onPress={() => goTo(t.key)}>
+              <Ionicons name={t.icon} size={22} color={active ? colors.primary : colors.muted} />
+              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </SafeAreaView>
   );
 }
@@ -87,11 +92,15 @@ export default function App() {
 const styles = StyleSheet.create({
   app: { flex: 1, backgroundColor: colors.bg },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  title: { color: "white", fontSize: 20, fontWeight: "700" },
-  nav: { flexDirection: "row", backgroundColor: colors.primary, paddingHorizontal: 8, paddingBottom: 8, flexWrap: "wrap", gap: 4 },
-  navBtn: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.15)" },
-  navBtnActive: { backgroundColor: colors.bg },
-  navText: { color: "white", fontSize: 12 },
-  navTextActive: { color: colors.primary, fontWeight: "700" },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: colors.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === "ios" ? 8 : 10,
+  },
+  tabBtn: { flex: 1, alignItems: "center", gap: 2 },
+  tabLabel: { fontSize: 11, color: colors.muted },
+  tabLabelActive: { color: colors.primary, fontWeight: "700" },
 });
